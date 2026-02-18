@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import Dashboard from './Dashboard'; 
 import logo from './assets/photo_2026-02-09_15-24-55.jpg';
+import LanguageModal from './LanguageModal';
+
+function App() {
+  return (
+    <div>
+      <LanguageModal />
+      {/* Qolgan hamma kodlaringiz shu yerda */}
+    </div>
+  );
+}
 
 function App() {
   const [step, setStep] = useState('landing');
