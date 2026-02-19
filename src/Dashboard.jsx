@@ -3,8 +3,26 @@ import { db } from "./firebase";
 import { collection, addDoc, updateDoc, doc, query, where, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { useTranslation } from 'react-i18next';
 import Maps from "./Maps";
+// Dashboard.js ichidagi form sarlavhasi
+<h3 style={{ color: '#FFB800', textAlign: 'center', marginBottom: '25px', fontSize: '20px' }}>
+  ON ROAD SERVICE: {role === 'master' ? t('master') : t('driver')}
+</h3>
+
 
 const Dashboard = ({ role, setStep }) => {
+  // Dashboard.js ichidagi Header
+<header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+  <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <h2 style={{ color: '#FFB800', margin: 0, fontSize: '22px', fontWeight: '900' }}>
+      ON ROAD SERVICE
+    </h2>
+    <span style={{ fontSize: '10px', color: '#666' }}>ONLINE SYSTEM</span>
+  </div>
+  <button onClick={() => setStep('landing')} style={{ background: '#FF4444', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+    {t('logout')}
+  </button>
+</header>
+
   const { t } = useTranslation();
   const [isSaved, setIsSaved] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
