@@ -37,5 +37,4 @@ function App() {
   }
   return <Dashboard role={userRole} setStep={setStep} />;
 }
-
 export default App;

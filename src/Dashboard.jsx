@@ -32,8 +32,8 @@ const Dashboard = ({ role, setStep }) => {
           ...profileInfo,
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
-          rating: 4.9,
-          jobs: 12,
+          rating: (Math.random() * (5 - 4) + 4).toFixed(1),
+          jobs: Math.floor(Math.random() * 50) + 5,
           createdAt: serverTimestamp()
         });
         setDocId(docRef.id);
@@ -50,10 +50,10 @@ const Dashboard = ({ role, setStep }) => {
   };
 
   const services = [
-    { id: 'Evakuator', icon: '🚛', label: t('evakuator'), msg: "🚨 Evakuator kerak!" },
-    { id: 'Balon', icon: '🔧', label: t('balon'), msg: "🔧 Balon kerak!" },
-    { id: 'Benzin', icon: '⛽', label: t('benzin'), msg: "⛽ Benzin kerak!" },
-    { id: 'Start', icon: '⚡', label: t('battery'), msg: "⚡ Start kerak!" }
+    { id: 'Evakuator', icon: '🚛', label: t('evakuator'), msg: "🚨 Menga evakuator kerak!" },
+    { id: 'Balon', icon: '🔧', label: t('balon'), msg: "🔧 Balon teshildi, yordam kerak!" },
+    { id: 'Benzin', icon: '⛽', label: t('benzin'), msg: "⛽ Benzinim tugab qoldi!" },
+    { id: 'Start', icon: '⚡', label: t('battery'), msg: "⚡ Akkumulyatorni 'perekurit' qilish kerak!" }
   ];
 
   return (
@@ -65,7 +65,7 @@ const Dashboard = ({ role, setStep }) => {
 
       {isSaved && role === 'master' && (
         <div style={{ background: '#1A1A1A', padding: '15px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #333' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             {isEditing ? (
               <input defaultValue={profileInfo.name} style={{background:'#000', color:'#fff', border:'1px solid #FFB800', padding:'5px'}} onBlur={async (e) => {
                 setProfileInfo({...profileInfo, name: e.target.value});
@@ -90,12 +90,12 @@ const Dashboard = ({ role, setStep }) => {
       ) : (
         role === 'user' ? (
           <>
-            <div style={{ height: '400px', borderRadius: '20px', overflow: 'hidden', border: '2px solid #333', marginBottom: '20px' }}>
+            <div style={{ height: '400px', borderRadius: '25px', overflow: 'hidden', border: '2px solid #333', marginBottom: '20px' }}>
               <Maps filterService={selectedService} senderInfo={profileInfo} services={services} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {services.map(s => (
-                <button key={s.id} onClick={() => setSelectedService(s.id)} style={{ padding: '15px', borderRadius: '12px', background: selectedService === s.id ? '#FFB800' : '#1A1A1A', color: selectedService === s.id ? '#000' : '#fff', border: 'none' }}>{s.icon} {s.label}</button>
+                <button key={s.id} onClick={() => setSelectedService(s.id)} style={{ padding: '15px', borderRadius: '15px', background: selectedService === s.id ? '#FFB800' : '#1A1A1A', color: selectedService === s.id ? '#000' : '#fff', border: 'none', fontWeight: 'bold' }}>{s.icon} {s.label}</button>
               ))}
             </div>
           </>
@@ -103,10 +103,10 @@ const Dashboard = ({ role, setStep }) => {
           <div style={{ background: '#1A1A1A', padding: '20px', borderRadius: '20px' }}>
             <h3 style={{ color: '#FFB800' }}>📬 {t('messages')}: {messages.length}</h3>
             {messages.map(msg => (
-              <div key={msg.id} style={{ background: '#0D0D0D', padding: '15px', borderRadius: '15px', marginBottom: '10px', borderLeft: '4px solid #FFB800' }}>
+              <div key={msg.id} style={{ background: '#0D0D0D', padding: '15px', borderRadius: '15px', marginBottom: '10px', borderLeft: '5px solid #FFB800' }}>
                 <p>👤 <b>{msg.senderName}</b> | 📞 {msg.senderPhone}</p>
                 <p style={{color: '#FFB800'}}>💬 {msg.text}</p>
-                <button onClick={() => window.open(`tel:${msg.senderPhone}`)} style={{ background: '#00C851', padding: '10px', borderRadius: '8px', color: '#fff', border: 'none' }}>📞 {t('call')}</button>
+                <button onClick={() => window.open(`tel:${msg.senderPhone}`)} style={{ background: '#00C851', border: 'none', padding: '10px', borderRadius: '8px', color: '#fff' }}>📞 {t('call')}</button>
               </div>
             ))}
           </div>

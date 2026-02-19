@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css"; // CSS BU YERDA BO'LISHI SHART
+import "leaflet/dist/leaflet.css";
 import { db } from "./firebase";
 import { collection, onSnapshot, query, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { useTranslation } from 'react-i18next';
 
-// Ikonkalar uchun sozlama
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 let DefaultIcon = L.icon({ iconUrl: markerIcon, shadowUrl: markerShadow, iconSize: [25, 41], iconAnchor: [12, 41] });
@@ -14,7 +13,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 function ChangeView({ center }) {
   const map = useMap();
-  useEffect(() => { map.setView(center); }, [center, map]);
+  useEffect(() => { map.setView(center); }, [center]);
   return null;
 }
 
@@ -26,7 +25,7 @@ function Maps({ filterService, senderInfo, services }) {
   useEffect(() => {
     navigator.geolocation.getCurrentPosition((pos) => setUserLoc([pos.coords.latitude, pos.coords.longitude]));
     
-    // Faqat bo'sh (isAvailable == true) ustalarni ko'rsatish
+    // Faqat 'Bo'sh' (Available) ustalarni ko'rsatish
     let q = query(collection(db, "masters"), where("isAvailable", "==", true));
     if (filterService) q = query(q, where("service", "==", filterService));
 
@@ -36,7 +35,7 @@ function Maps({ filterService, senderInfo, services }) {
   }, [filterService]);
 
   const sendMessage = async (master) => {
-    const msgText = services.find(s => s.id === filterService)?.msg || "Yordam kerak!";
+    const msgText = services.find(s => s.id === filterService)?.msg || "SOS! Yordam kerak!";
     try {
       await addDoc(collection(db, "messages"), {
         senderName: senderInfo.name,
@@ -50,7 +49,7 @@ function Maps({ filterService, senderInfo, services }) {
   };
 
   return (
-    <div style={{ height: '100%', width: '100%' }}>
+    <div style={{ height: '100%', width: '100%', background: '#111' }}>
       <MapContainer center={userLoc} zoom={13} style={{ height: '400px', width: '100%' }}>
         <ChangeView center={userLoc} />
         <TileLayer url="https://{s}://{z}/{x}/{y}{r}.png" />
@@ -60,7 +59,7 @@ function Maps({ filterService, senderInfo, services }) {
             <Popup>
               <div style={{color:'#000'}}>
                 <b>{m.name}</b><br/>⭐ {m.rating} | ✅ {m.jobs}<br/>
-                <button onClick={() => sendMessage(m)} style={{background:'#FFB800', border:'none', padding:'5px', marginTop:'5px', cursor:'pointer', width:'100%'}}>💬 Xabar</button>
+                <button onClick={() => sendMessage(m)} style={{background:'#FFB800', border:'none', padding:'5px', marginTop:'5px', cursor:'pointer', width:'100%', fontWeight:'bold'}}>💬 Xabar</button>
               </div>
             </Popup>
           </Marker>
