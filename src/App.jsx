@@ -108,8 +108,9 @@ if (step === 'landing') {
   }
  
   if (step === 'dashboard') {
-    return <Dashboard role={userRole} />;
-  }
+  return <Dashboard role={userRole} setStep={setStep} />; // setStep qo'shildi
+}
+
 
   return null;
 }
