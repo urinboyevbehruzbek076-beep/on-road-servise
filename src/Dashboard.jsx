@@ -12,7 +12,14 @@ const Dashboard = ({ role, setStep }) => {
   const [selectedService, setSelectedService] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [profileInfo, setProfileInfo] = useState({ name: '', phone: '', service: 'Evakuator', price: '', isAvailable: true });
+  
+  const [profileInfo, setProfileInfo] = useState({ 
+    name: '', 
+    phone: '', 
+    service: 'Evakuator', 
+    price: '', 
+    isAvailable: true 
+  });
 
   const services = [
     { id: 'Evakuator', icon: '🚛', label: t('evakuator'), msg: "🚨 ON ROAD SERVICE: Evakuator kerak!" },
@@ -24,9 +31,10 @@ const Dashboard = ({ role, setStep }) => {
   useEffect(() => {
     if (isSaved && role === 'master' && docId) {
       const q = query(collection(db, "messages"), where("receiverId", "==", docId), orderBy("createdAt", "desc"));
-      return onSnapshot(q, (snapshot) => {
+      const unsubscribe = onSnapshot(q, (snapshot) => {
         setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
+      return () => unsubscribe();
     }
   }, [isSaved, docId, role]);
 
@@ -58,7 +66,6 @@ const Dashboard = ({ role, setStep }) => {
         price: profileInfo.price
       });
       setIsEditing(false);
-      alert("ON ROAD SERVICE: Profil yangilandi!");
     }
   };
 
@@ -77,46 +84,41 @@ const Dashboard = ({ role, setStep }) => {
               {isEditing ? t('save') : t('edit')}
             </button>
           </div>
-          <div style={{ marginTop: '15px' }}>
-            {isEditing ? (
-              <div>
-                <input value={profileInfo.name} style={{width:'100%', padding:'10px', marginBottom:'10px', background:'#000', color:'#fff'}} onChange={e => setProfileInfo({...profileInfo, name: e.target.value})} />
-                <select style={{width:'100%', padding:'10px', marginBottom:'10px', background:'#000', color:'#fff'}} value={profileInfo.service} onChange={e => setProfileInfo({...profileInfo, service: e.target.value})}>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                </select>
-                <input placeholder="Xizmat narxi (so'm)" value={profileInfo.price} style={{width:'100%', padding:'10px', background:'#000', color:'#fff'}} onChange={e => setProfileInfo({...profileInfo, price: e.target.value})} />
-              </div>
-            ) : (
-              <div>
-                <p>👤 <b>{profileInfo.name}</b></p>
-                <p>🛠 <b>{profileInfo.service}</b></p>
-                <p>💰 <b>{profileInfo.price ? `${profileInfo.price} so'm` : "Narx kiritilmagan"}</b></p>
-              </div>
-            )}
-          </div>
+          {isEditing ? (
+            <div style={{marginTop: '15px'}}>
+              <input value={profileInfo.name} style={{width:'100%', padding:'10px', marginBottom:'10px', background:'#000', color:'#fff', border:'1px solid #333'}} onChange={e => setProfileInfo({...profileInfo, name: e.target.value})} />
+              <select style={{width:'100%', padding:'10px', marginBottom:'10px', background:'#000', color:'#fff', border:'1px solid #333'}} value={profileInfo.service} onChange={e => setProfileInfo({...profileInfo, service: e.target.value})}>
+                {services.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+              <input placeholder="Narx (so'm)" value={profileInfo.price} style={{width:'100%', padding:'10px', background:'#000', color:'#fff', border:'1px solid #333'}} onChange={e => setProfileInfo({...profileInfo, price: e.target.value})} />
+            </div>
+          ) : (
+            <div style={{marginTop: '15px'}}>
+              <p>👤 <b>{profileInfo.name}</b></p>
+              <p>🛠 <b>{profileInfo.service}</b></p>
+              <p>💰 <b>{profileInfo.price || '0'} so'm</b></p>
+            </div>
+          )}
         </div>
       )}
 
       {!isSaved ? (
         <div style={{ background: '#1A1A1A', padding: '30px', borderRadius: '25px', maxWidth: '400px', margin: '40px auto' }}>
           <h3 style={{ color: '#FFB800', textAlign: 'center' }}>ON ROAD SERVICE</h3>
-          <input placeholder={t('name_placeholder')} style={{width:'100%', padding:'15px', marginBottom:'10px', background:'#000', color:'#fff'}} onChange={e => setProfileInfo({...profileInfo, name: e.target.value})} />
-          <input placeholder={t('phone_placeholder')} style={{width:'100%', padding:'15px', marginBottom:'20px', background:'#000', color:'#fff'}} onChange={e => setProfileInfo({...profileInfo, phone: e.target.value})} />
-          <button onClick={handleSave} style={{ width: '100%', padding: '15px', background: '#FFB800', borderRadius: '10px', fontWeight: 'bold' }}>{loading ? t('loading') : t('start')}</button>
+          <input placeholder={t('name_placeholder')} style={{width:'100%', padding:'15px', marginBottom:'10px', background:'#000', color:'#fff', border:'1px solid #333'}} onChange={e => setProfileInfo({...profileInfo, name: e.target.value})} />
+          <input placeholder={t('phone_placeholder')} style={{width:'100%', padding:'15px', marginBottom:'20px', background:'#000', color:'#fff', border:'1px solid #333'}} onChange={e => setProfileInfo({...profileInfo, phone: e.target.value})} />
+          <button onClick={handleSave} style={{ width: '100%', padding: '15px', background: '#FFB800', borderRadius: '10px', fontWeight: 'bold', border: 'none' }}>{loading ? t('loading') : t('start')}</button>
         </div>
       ) : (
         role === 'user' && (
-          <div style={{ height: '450px', borderRadius: '20px', overflow: 'hidden', border: '2px solid #333' }}>
+          <div style={{ height: '400px', borderRadius: '20px', overflow: 'hidden', border: '2px solid #333' }}>
             <Maps filterService={selectedService} senderInfo={profileInfo} services={services} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-              {services.map(s => (
-                <button key={s.id} onClick={() => setSelectedService(s.id)} style={{ padding: '10px', borderRadius: '10px', background: selectedService === s.id ? '#FFB800' : '#1A1A1A', color: selectedService === s.id ? '#000' : '#fff' }}>{s.icon} {s.label}</button>
-              ))}
-            </div>
           </div>
         )
       )}
+      {/* ... (Xabarlar qismi) */}
     </div>
   );
 };
+
 export default Dashboard;
