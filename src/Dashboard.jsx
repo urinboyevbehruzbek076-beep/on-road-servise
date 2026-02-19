@@ -12,7 +12,21 @@ const Dashboard = ({ role, setStep }) => {
   const [selectedService, setSelectedService] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [profileInfo, setProfileInfo] = useState({ name: '', phone: '', service: 'Evakuator', isAvailable: true });
+  
+  const [profileInfo, setProfileInfo] = useState({ 
+    name: '', 
+    phone: '', 
+    service: 'Evakuator', 
+    price: '', 
+    isAvailable: true 
+  });
+
+  const services = [
+    { id: 'Evakuator', icon: '🚛', label: t('evakuator'), msg: "🚨 Evakuator kerak!" },
+    { id: 'Balon', icon: '🔧', label: t('balon'), msg: "🔧 Balon kerak!" },
+    { id: 'Benzin', icon: '⛽', label: t('benzin'), msg: "⛽ Benzin kerak!" },
+    { id: 'Start', icon: '⚡', label: t('battery'), msg: "⚡ Start kerak!" }
+  ];
 
   useEffect(() => {
     if (isSaved && role === 'master' && docId) {
@@ -24,7 +38,7 @@ const Dashboard = ({ role, setStep }) => {
   }, [isSaved, docId, role]);
 
   const handleSave = async () => {
-    if (!profileInfo.name || !profileInfo.phone) return alert("To'liq to'ldiring!");
+    if (!profileInfo.name || !profileInfo.phone) return alert("To'ldiring!");
     setLoading(true);
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
@@ -32,8 +46,8 @@ const Dashboard = ({ role, setStep }) => {
           ...profileInfo,
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
-          rating: (Math.random() * (5 - 4) + 4).toFixed(1),
-          jobs: Math.floor(Math.random() * 50) + 5,
+          rating: 4.8,
+          jobs: 0,
           createdAt: serverTimestamp()
         });
         setDocId(docRef.id);
@@ -43,18 +57,25 @@ const Dashboard = ({ role, setStep }) => {
     });
   };
 
+  const updateProfile = async () => {
+    if (docId) {
+      await updateDoc(doc(db, "masters", docId), {
+        name: profileInfo.name,
+        service: profileInfo.service,
+        price: profileInfo.price
+      });
+      setIsEditing(false);
+      alert("Profil yangilandi!");
+    }
+  };
+
   const toggleStatus = async () => {
     const newStatus = !profileInfo.isAvailable;
     setProfileInfo({ ...profileInfo, isAvailable: newStatus });
     if (docId) await updateDoc(doc(db, "masters", docId), { isAvailable: newStatus });
   };
 
-  const services = [
-    { id: 'Evakuator', icon: '🚛', label: t('evakuator'), msg: "🚨 Menga evakuator kerak!" },
-    { id: 'Balon', icon: '🔧', label: t('balon'), msg: "🔧 Balon teshildi, yordam kerak!" },
-    { id: 'Benzin', icon: '⛽', label: t('benzin'), msg: "⛽ Benzinim tugab qoldi!" },
-    { id: 'Start', icon: '⚡', label: t('battery'), msg: "⚡ Akkumulyatorni 'perekurit' qilish kerak!" }
-  ];
+  const inputStyle = { width: '100%', padding: '12px', marginBottom: '10px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' };
 
   return (
     <div style={{ backgroundColor: '#0D0D0D', minHeight: '100vh', color: '#fff', padding: '20px' }}>
@@ -64,38 +85,56 @@ const Dashboard = ({ role, setStep }) => {
       </header>
 
       {isSaved && role === 'master' && (
-        <div style={{ background: '#1A1A1A', padding: '15px', borderRadius: '15px', marginBottom: '20px', border: '1px solid #333' }}>
+        <div style={{ background: '#1A1A1A', padding: '20px', borderRadius: '20px', marginBottom: '20px', border: '1px solid #333' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            {isEditing ? (
-              <input defaultValue={profileInfo.name} style={{background:'#000', color:'#fff', border:'1px solid #FFB800', padding:'5px'}} onBlur={async (e) => {
-                setProfileInfo({...profileInfo, name: e.target.value});
-                await updateDoc(doc(db, "masters", docId), { name: e.target.value });
-              }} />
-            ) : ( <h3>{profileInfo.name}</h3> )}
+            <h3 style={{color: '#FFB800', margin: 0}}>{t('master')}</h3>
             <div style={{display:'flex', gap:'10px'}}>
-              <button onClick={() => setIsEditing(!isEditing)} style={{background:'#444', color:'#fff', border:'none', padding:'5px 10px', borderRadius:'5px'}}>{isEditing ? t('save') : t('edit')}</button>
-              <button onClick={toggleStatus} style={{ background: profileInfo.isAvailable ? '#00C851' : '#FF4444', border: 'none', padding: '5px 15px', borderRadius: '5px', color: '#fff', fontWeight: 'bold' }}>{profileInfo.isAvailable ? t('available') : t('busy')}</button>
+              <button onClick={() => setIsEditing(!isEditing)} style={{ background: '#FFB800', color: '#000', border: 'none', padding: '5px 15px', borderRadius: '8px', fontWeight: 'bold' }}>
+                {isEditing ? t('save') : t('edit')}
+              </button>
+              <button onClick={toggleStatus} style={{ background: profileInfo.isAvailable ? '#00C851' : '#FF4444', border: 'none', padding: '5px 15px', borderRadius: '8px', color: '#fff' }}>
+                {profileInfo.isAvailable ? t('available') : t('busy')}
+              </button>
             </div>
+          </div>
+
+          <div style={{ marginTop: '15px' }}>
+            {isEditing ? (
+              <div>
+                <input placeholder="Ism" value={profileInfo.name} style={inputStyle} onChange={e => setProfileInfo({...profileInfo, name: e.target.value})} />
+                <select style={inputStyle} value={profileInfo.service} onChange={e => setProfileInfo({...profileInfo, service: e.target.value})}>
+                  {services.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+                <input placeholder="Xizmat narxi" value={profileInfo.price} style={inputStyle} onChange={e => setProfileInfo({...profileInfo, price: e.target.value})} />
+                <button onClick={updateProfile} style={{width:'100%', background:'#00C851', color:'#fff', padding:'10px', borderRadius:'10px', border:'none'}}>{t('save')}</button>
+              </div>
+            ) : (
+              <div style={{fontSize: '14px'}}>
+                <p>👤 <b>{profileInfo.name}</b></p>
+                <p>🛠 <b>{profileInfo.service}</b></p>
+                <p>💰 <b>{profileInfo.price || '0'}</b> so'm</p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {!isSaved ? (
-        <div style={{ background: '#1A1A1A', padding: '30px', borderRadius: '25px', maxWidth: '400px', margin: '0 auto' }}>
+        <div style={{ background: '#1A1A1A', padding: '30px', borderRadius: '25px', maxWidth: '400px', margin: '40px auto' }}>
           <h3 style={{ color: '#FFB800', textAlign: 'center' }}>{t('registration')}</h3>
-          <input placeholder={t('name_placeholder')} style={{ width: '100%', padding: '15px', marginBottom: '10px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} onChange={e => setProfileInfo({...profileInfo, name: e.target.value})} />
-          <input placeholder={t('phone_placeholder')} style={{ width: '100%', padding: '15px', marginBottom: '20px', background: '#000', color: '#fff', border: '1px solid #333', borderRadius: '10px' }} onChange={e => setProfileInfo({...profileInfo, phone: e.target.value})} />
-          <button onClick={handleSave} style={{ width: '100%', padding: '15px', background: '#FFB800', color: '#000', borderRadius: '10px', fontWeight: 'bold' }}>{loading ? t('loading') : t('start')}</button>
+          <input placeholder={t('name_placeholder')} style={inputStyle} onChange={e => setProfileInfo({...profileInfo, name: e.target.value})} />
+          <input placeholder={t('phone_placeholder')} style={inputStyle} onChange={e => setProfileInfo({...profileInfo, phone: e.target.value})} />
+          <button onClick={handleSave} style={{ width: '100%', padding: '15px', background: '#FFB800', borderRadius: '10px', fontWeight: 'bold', border: 'none' }}>{loading ? t('loading') : t('start')}</button>
         </div>
       ) : (
         role === 'user' ? (
           <>
-            <div style={{ height: '400px', borderRadius: '25px', overflow: 'hidden', border: '2px solid #333', marginBottom: '20px' }}>
+            <div style={{ height: '400px', borderRadius: '20px', overflow: 'hidden', border: '2px solid #333', marginBottom: '20px' }}>
               <Maps filterService={selectedService} senderInfo={profileInfo} services={services} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {services.map(s => (
-                <button key={s.id} onClick={() => setSelectedService(s.id)} style={{ padding: '15px', borderRadius: '15px', background: selectedService === s.id ? '#FFB800' : '#1A1A1A', color: selectedService === s.id ? '#000' : '#fff', border: 'none', fontWeight: 'bold' }}>{s.icon} {s.label}</button>
+                <button key={s.id} onClick={() => setSelectedService(s.id)} style={{ padding: '15px', borderRadius: '12px', background: selectedService === s.id ? '#FFB800' : '#1A1A1A', color: selectedService === s.id ? '#000' : '#fff', border: 'none', fontWeight: 'bold' }}>{s.icon} {s.label}</button>
               ))}
             </div>
           </>
@@ -106,7 +145,7 @@ const Dashboard = ({ role, setStep }) => {
               <div key={msg.id} style={{ background: '#0D0D0D', padding: '15px', borderRadius: '15px', marginBottom: '10px', borderLeft: '5px solid #FFB800' }}>
                 <p>👤 <b>{msg.senderName}</b> | 📞 {msg.senderPhone}</p>
                 <p style={{color: '#FFB800'}}>💬 {msg.text}</p>
-                <button onClick={() => window.open(`tel:${msg.senderPhone}`)} style={{ background: '#00C851', border: 'none', padding: '10px', borderRadius: '8px', color: '#fff' }}>📞 {t('call')}</button>
+                <button onClick={() => window.open(`tel:${msg.senderPhone}`)} style={{ background: '#00C851', padding: '8px 15px', borderRadius: '8px', color: '#fff', border: 'none' }}>📞 {t('call')}</button>
               </div>
             ))}
           </div>
@@ -115,4 +154,5 @@ const Dashboard = ({ role, setStep }) => {
     </div>
   );
 };
-export default Dashboard;
+
+export default Dashboard; // KOMPONENTNI EXPORT QILISH!
