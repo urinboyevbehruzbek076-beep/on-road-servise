@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Dashboard from './Dashboard'; 
-import logo from '\photo_2026-02-18_22-37-55.jpg"';
-
+import logo from './assets/photo_2026-02-18_22-37-55.jpg'; // Yangi rasm manzili
 
 function App() {
   const { t, i18n } = useTranslation();
   const [step, setStep] = useState('landing');
   const [userRole, setUserRole] = useState(null);
-  
 
   if (step === 'landing') {          
     return (
@@ -18,22 +16,8 @@ function App() {
             <button key={lng} onClick={() => i18n.changeLanguage(lng)} style={{ background: i18n.language === lng ? '#FFB800' : '#222', color: i18n.language === lng ? '#000' : '#fff', border: 'none', padding: '8px 15px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>{lng.toUpperCase()}</button>
           ))}
         </div>
-        // App.js ichidagi Landing qismi
-<h1 style={{ 
-  color: '#FFB800', 
-  fontSize: '32px', 
-  margin: '0', 
-  letterSpacing: '2px', 
-  fontWeight: '900' 
-}}>
-  ON ROAD SERVICE
-</h1>
-<p style={{ color: '#888', fontSize: '12px', marginTop: '5px', marginBottom: '40px', letterSpacing: '1px' }}>
-  PREMIUM HELP SYSTEM
-</p>
-
-        <img src={logo} alt="Logo" style={{ width: '180px', borderRadius: '50%', border: '4px solid #FFB800', marginBottom: '20px', boxShadow: '0 0 30px rgba(255, 184, 0, 0.3)' }} />
-        <h1 style={{ color: '#FFB800', fontSize: '32px', margin: '0', letterSpacing: '3px' }}>ON-ROAD</h1>
+        <img src={logo} alt="Logo" style={{ width: '200px', height: '200px', objectFit: 'cover', borderRadius: '50%', border: '4px solid #FFB800', marginBottom: '20px', boxShadow: '0 0 30px rgba(255, 184, 0, 0.4)' }} />
+        <h1 style={{ color: '#FFB800', fontSize: '32px', margin: '0', letterSpacing: '3px', fontWeight: '900' }}>ON ROAD SERVICE</h1>
         <p style={{ color: '#aaa', textAlign: 'center', margin: '15px 0 40px' }}>{t('hero_title')}</p>
         <button onClick={() => setStep('role')} style={{ backgroundColor: '#FFB800', color: '#000', padding: '18px 60px', fontSize: '18px', fontWeight: '900', border: 'none', borderRadius: '50px', cursor: 'pointer' }}>{t('start')}</button>
       </div>
@@ -53,4 +37,5 @@ function App() {
   }
   return <Dashboard role={userRole} setStep={setStep} />;
 }
+
 export default App;
