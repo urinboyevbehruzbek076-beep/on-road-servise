@@ -6,34 +6,70 @@ import Maps from "./Maps";
 
 const Dashboard = ({ role, setStep }) => {
   const { t } = useTranslation();
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved] = useState(false); // Ro'yxatdan o'tganlik holati
   const [isEditing, setIsEditing] = useState(false);
   const [docId, setDocId] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [profileInfo, setProfileInfo] = useState({ name: '', phone: '', service: 'Evakuator', price: '', isAvailable: true });
+  const [loading, setLoading] = useState(false);
+
+  // Profil ma'lumotlari
+  const [profileInfo, setProfileInfo] = useState({ 
+    name: '', 
+    phone: '', 
+    service: 'Evakuator', 
+    price: '', 
+    isAvailable: true 
+  });
 
   const services = [
-    { id: 'Evakuator', icon: '🚛', label: 'Evakuator', msg: "🆘 Evakuator kerak!" },
-    { id: 'Balon', icon: '🔧', label: 'Balon', msg: "🔧 Balon teshildi!" },
-    { id: 'Benzin', icon: '⛽', label: 'Benzin', msg: "⛽ Benzin tugadi!" },
-    { id: 'Start', icon: '⚡', label: 'Start', msg: "⚡ Start kerak!" }
+    { id: 'Evakuator', icon: '🚛', label: t('evakuator'), msg: "🆘 ON ROAD SERVICE: Evakuator kerak!" },
+    { id: 'Balon', icon: '🔧', label: t('balon'), msg: "🔧 ON ROAD SERVICE: Balon kerak!" },
+    { id: 'Benzin', icon: '⛽', label: t('benzin'), msg: "⛽ ON ROAD SERVICE: Benzin kerak!" },
+    { id: 'Start', icon: '⚡', label: t('battery'), msg: "⚡ ON ROAD SERVICE: Start kerak!" }
   ];
 
+  // Master uchun xabarlarni eshitish
   useEffect(() => {
     if (isSaved && role === 'master' && docId) {
       const q = query(collection(db, "messages"), where("receiverId", "==", docId), orderBy("createdAt", "desc"));
-      return onSnapshot(q, (snapshot) => setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+      return () => unsubscribe();
     }
   }, [isSaved, docId, role]);
 
+  // Bazaga saqlash va davom etish
   const handleSave = async () => {
-    if (!profileInfo.name || !profileInfo.phone) return alert("To'ldiring!");
+    if (!profileInfo.name || !profileInfo.phone) {
+      alert(t('name_placeholder') + " & " + t('phone_placeholder'));
+      return;
+    }
+    setLoading(true);
+
     navigator.geolocation.getCurrentPosition(async (pos) => {
-      const docRef = await addDoc(collection(db, role === 'master' ? "masters" : "users"), {
-        ...profileInfo, lat: pos.coords.latitude, lng: pos.coords.longitude, rating: 5.0, jobs: 0, createdAt: serverTimestamp()
-      });
-      setDocId(docRef.id); setIsSaved(true);
+      try {
+        const colName = role === 'master' ? "masters" : "users";
+        const docRef = await addDoc(collection(db, colName), {
+          ...profileInfo,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          rating: 5.0,
+          jobs: 0,
+          role: role,
+          createdAt: serverTimestamp()
+        });
+        setDocId(docRef.id);
+        setIsSaved(true); // FAQAT MUVAFFaqiyatli saqlangandan keyin o'tadi
+      } catch (e) {
+        alert("Firebase Error: " + e.message);
+      } finally {
+        setLoading(false);
+      }
+    }, (err) => {
+      alert("Lokatsiyaga ruxsat bering!");
+      setLoading(false);
     });
   };
 
@@ -43,54 +79,92 @@ const Dashboard = ({ role, setStep }) => {
     if (docId) await updateDoc(doc(db, "masters", docId), { isAvailable: newStatus });
   };
 
+  const inputStyle = { width: '100%', padding: '15px', marginBottom: '15px', background: '#111', color: '#fff', border: '1px solid #333', borderRadius: '12px', boxSizing: 'border-box' };
+
   return (
     <div style={{ backgroundColor: '#0D0D0D', minHeight: '100vh', color: '#fff', padding: '20px' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#FFB800' }}>ON ROAD SERVICE</h2>
-        <button onClick={() => setStep('landing')} style={{ background: '#FF4444', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '10px' }}>{t('logout')}</button>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <h2 style={{ color: '#FFB800', margin: 0, fontWeight: '900' }}>ON ROAD SERVICE</h2>
+        <button onClick={() => setStep('landing')} style={{ background: '#FF4444', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>{t('logout')}</button>
       </header>
 
-      {isSaved && role === 'master' && (
-        <div style={{ background: '#1A1A1A', padding: '15px', borderRadius: '15px', border: '1px solid #FFB800', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            {isEditing ? (
-              <div style={{ width: '100%' }}>
-                <input value={profileInfo.name} style={{width:'100%', padding:'5px', marginBottom:'5px'}} onChange={e => setProfileInfo({...profileInfo, name: e.target.value})} />
-                <select value={profileInfo.service} style={{width:'100%', padding:'5px', marginBottom:'5px'}} onChange={e => setProfileInfo({...profileInfo, service: e.target.value})}>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                </select>
-                <input placeholder="Narx" value={profileInfo.price} style={{width:'100%', padding:'5px'}} onChange={e => setProfileInfo({...profileInfo, price: e.target.value})} />
-              </div>
-            ) : (
-              <div><h3>{profileInfo.name}</h3><p>{profileInfo.service} | {profileInfo.price} so'm</p></div>
-            )}
-            <div style={{display:'flex', gap:'5px', height:'40px'}}>
-              <button onClick={async () => { if(isEditing) await updateDoc(doc(db, "masters", docId), {name: profileInfo.name, service: profileInfo.service, price: profileInfo.price}); setIsEditing(!isEditing); }}>{isEditing ? t('save') : t('edit')}</button>
-              <button onClick={toggleStatus} style={{background: profileInfo.isAvailable ? '#00C851' : '#FF4444', color:'#fff'}}>{profileInfo.isAvailable ? t('available') : t('busy')}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {!isSaved ? (
-        <div style={{ background: '#1A1A1A', padding: '30px', borderRadius: '20px', maxWidth: '400px', margin: '0 auto' }}>
-          <h3 style={{textAlign:'center', color:'#FFB800'}}>ON ROAD SERVICE</h3>
-          <input placeholder={t('name_placeholder')} style={{width:'100%', padding:'10px', marginBottom:'10px'}} onChange={e => setProfileInfo({...profileInfo, name: e.target.value})} />
-          <input placeholder={t('phone_placeholder')} style={{width:'100%', padding:'10px', marginBottom:'20px'}} onChange={e => setProfileInfo({...profileInfo, phone: e.target.value})} />
-          <button onClick={handleSave} style={{width:'100%', padding:'10px', background:'#FFB800', fontWeight:'bold'}}>{t('start')}</button>
+        /* 1-QADAM: RO'YXATDAN O'TISH */
+        <div style={{ background: '#1A1A1A', padding: '30px', borderRadius: '25px', maxWidth: '400px', margin: '40px auto', border: '1px solid #333' }}>
+          <h3 style={{ color: '#FFB800', textAlign: 'center', marginBottom: '25px' }}>
+            {role === 'master' ? t('master') : t('driver')} {t('registration')}
+          </h3>
+          <input 
+            placeholder={t('name_placeholder')} 
+            style={inputStyle} 
+            onChange={e => setProfileInfo({...profileInfo, name: e.target.value})} 
+          />
+          <input 
+            placeholder={t('phone_placeholder')} 
+            type="tel"
+            style={inputStyle} 
+            onChange={e => setProfileInfo({...profileInfo, phone: e.target.value})} 
+          />
+          <button 
+            onClick={handleSave} 
+            disabled={loading}
+            style={{ width: '100%', padding: '15px', background: '#FFB800', color: '#000', borderRadius: '12px', fontWeight: '900', border: 'none', cursor: 'pointer' }}
+          >
+            {loading ? t('loading') : t('start')}
+          </button>
         </div>
       ) : (
-        role === 'user' && (
-          <div style={{ height: '400px', borderRadius: '20px', overflow: 'hidden', border: '1px solid #333' }}>
-            <Maps filterService={selectedService} senderInfo={profileInfo} services={services} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-              {services.map(s => <button key={s.id} onClick={() => setSelectedService(s.id)} style={{background: selectedService===s.id ? '#FFB800' : '#1A1A1A', color: selectedService===s.id ? '#000' : '#fff', padding:'10px', border:'none', borderRadius:'10px'}}>{s.icon} {s.label}</button>)}
-            </div>
-          </div>
-        )
+        /* 2-QADAM: ASOSIY PANEL */
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          {role === 'user' ? (
+            /* HAYDOVCHI EKRANI */
+            <>
+              <div style={{ height: '450px', borderRadius: '25px', overflow: 'hidden', border: '2px solid #333', marginBottom: '20px' }}>
+                <Maps filterService={selectedService} senderInfo={profileInfo} services={services} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                {services.map(s => (
+                  <button 
+                    key={s.id} 
+                    onClick={() => setSelectedService(s.id)} 
+                    style={{ padding: '20px', borderRadius: '15px', background: selectedService === s.id ? '#FFB800' : '#1A1A1A', color: selectedService === s.id ? '#000' : '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    {s.icon} {s.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            /* USTA EKRANI */
+            <>
+              <div style={{ background: '#1A1A1A', padding: '20px', borderRadius: '20px', marginBottom: '20px', border: '1px solid #FFB800' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <div>
+                      <h3 style={{margin: 0}}>{profileInfo.name}</h3>
+                      <p style={{margin: '5px 0', color: '#888'}}>{profileInfo.service} | {profileInfo.price || '0'} so'm</p>
+                   </div>
+                   <button onClick={toggleStatus} style={{ background: profileInfo.isAvailable ? '#00C851' : '#FF4444', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 'bold' }}>
+                    {profileInfo.isAvailable ? t('available') : t('busy')}
+                   </button>
+                </div>
+              </div>
+
+              <div style={{ background: '#1A1A1A', padding: '20px', borderRadius: '20px' }}>
+                <h3 style={{ color: '#FFB800', marginBottom: '20px' }}>📬 {t('messages')} ({messages.length})</h3>
+                {messages.map(msg => (
+                  <div key={msg.id} style={{ background: '#0D0D0D', padding: '15px', borderRadius: '15px', marginBottom: '10px', borderLeft: '5px solid #FFB800' }}>
+                    <p style={{margin: '0 0 5px'}}>👤 <b>{msg.senderName}</b> | 📞 {msg.senderPhone}</p>
+                    <p style={{color: '#FFB800', margin: '0 0 10px'}}>💬 {msg.text}</p>
+                    <button onClick={() => window.open(`tel:${msg.senderPhone}`)} style={{ background: '#00C851', border: 'none', padding: '10px 20px', borderRadius: '10px', color: '#fff', fontWeight: 'bold' }}>📞 {t('call')}</button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       )}
-      {/* Messages rendering logic here... */}
     </div>
   );
 };
+
 export default Dashboard;
