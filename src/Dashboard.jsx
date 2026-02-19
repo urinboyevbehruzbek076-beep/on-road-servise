@@ -1,172 +1,95 @@
 import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { collection, addDoc, updateDoc, doc, query, where, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
-import { motion, AnimatePresence } from "framer-motion"; 
-import { useTranslation } from 'react-i18next'; 
+import { collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { useTranslation } from 'react-i18next';
 import Maps from "./Maps";
 
 const Dashboard = ({ role, setStep }) => {
-  const { t } = useTranslation(); 
-
+  const { t } = useTranslation();
   const [isSaved, setIsSaved] = useState(false);
   const [docId, setDocId] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [profileInfo, setProfileInfo] = useState({
-    name: '',
-    phone: '',
-    service: 'Akkumulyator (Start)',
-    isAvailable: true
-  });
+  const [profileInfo, setProfileInfo] = useState({ name: '', phone: '', service: 'Evakuator' });
 
-  // Xabarlarni eshitish (Master uchun)
   useEffect(() => {
     if (isSaved && role === 'master' && docId) {
-      const q = query(
-        collection(db, "messages"), 
-        where("receiverId", "==", docId), 
-        orderBy("createdAt", "desc")
-      );
-      
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const newMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        if (newMessages.length > messages.length && messages.length !== 0) {
-          const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3");
-          audio.play().catch(e => console.log("Ovoz xatosi:", e));
-        }
-        
-        setMessages(newMessages);
+      const q = query(collection(db, "messages"), where("receiverId", "==", docId), orderBy("createdAt", "desc"));
+      return onSnapshot(q, (snapshot) => {
+        setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
-      return () => unsubscribe();
     }
-  }, [isSaved, docId, role]); 
+  }, [isSaved, docId, role]);
 
   const handleSave = async () => {
-    if (!profileInfo.name || !profileInfo.phone) {
-      alert(t('Iltimos, ma' + "'" + 'lumotlarni to' + "'" + 'liq kiriting!'));
-      return;
-    }
+    if (!profileInfo.name || !profileInfo.phone) return alert(t('name_placeholder'));
     setLoading(true);
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        try {
-          const currentRole = role || 'user';
-          const colName = currentRole === 'master' ? "masters" : "users";
-
-          const data = {
-            ...profileInfo,
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            role: currentRole,
-            createdAt: serverTimestamp()
-          };
-
-          const docRef = await addDoc(collection(db, colName), data);
-          setDocId(docRef.id);
-          setIsSaved(true);
-        } catch (e) {
-          alert("Xatolik: " + e.message);
-        } finally {
-          setLoading(false);
-        }
-      }, () => {
-        alert(t('Joylashuvni aniqlashga ruxsat bering!'));
-        setLoading(false);
-      });
-    }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const docRef = await addDoc(collection(db, role === 'master' ? "masters" : "users"), {
+          ...profileInfo,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          isAvailable: true,
+          rating: (Math.random() * (5 - 4.2) + 4.2).toFixed(1), // Demo reyting
+          jobs: Math.floor(Math.random() * 80) + 5, // Demo ishlar soni
+          createdAt: serverTimestamp()
+        });
+        setDocId(docRef.id);
+        setIsSaved(true);
+      } catch (e) { alert(e.message); }
+      setLoading(false);
+    });
   };
 
-  const serviceIcons = [
-    { id: 'Evakuator', icon: '🚛', label: t('Evakuator') },
-    { id: "G'ildirak almashtirish", icon: '🔧', label: t('Balon') },
-    { id: 'Yoqilg\'i yetkazish', icon: '⛽️', label: t('Benzin') },
-    { id: 'Akkumulyator (Start)', icon: '⚡️', label: t('Start') }
+  const services = [
+    { id: 'Evakuator', icon: '🚛', label: t('evakuator'), msg: "🚨 Evakuator kerak!" },
+    { id: 'Balon', icon: '🔧', label: t('balon'), msg: "🔧 Balon almashtirish kerak!" },
+    { id: 'Benzin', icon: '⛽', label: t('benzin'), msg: "⛽ Benzin tugadi!" },
+    { id: 'Start', icon: '⚡', label: t('battery'), msg: "⚡ Akkumulyatordan o't oldirish kerak!" }
   ];
 
-  const glassStyle = {
-    background: "rgba(255, 255, 255, 0.05)",
-    backdropFilter: "blur(15px)",
-    borderRadius: "24px",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
-    padding: "24px"
-  };
-
-  const inputStyle = {
-    width: '100%', padding: '15px', marginBottom: '15px', borderRadius: '12px',
-    border: '1px solid #333', backgroundColor: '#111', color: '#fff', outline: 'none'
-  };
-
   return (
-    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px' }}>
-        <h2 style={{ color: '#FFD700' }}>ON-ROAD</h2>
-        <button onClick={() => setStep('landing')} style={{ background: '#ff4444', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
-          {t('logout') || 'CHIQISH'}
-        </button>
+    <div style={{ backgroundColor: '#0D0D0D', minHeight: '100vh', color: '#fff', padding: '20px' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <h2 style={{ color: '#FFB800', margin: 0 }}>ON-ROAD</h2>
+        <button onClick={() => setStep('landing')} style={{ background: '#FF4444', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '10px', fontWeight: 'bold' }}>{t('logout')}</button>
       </header>
 
       {!isSaved ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ ...glassStyle, maxWidth: '400px', margin: '0 auto' }}>
-          <h3 style={{ textAlign: 'center', color: '#FFD700' }}>
-            {role === 'master' ? t('master') : t('driver')}
-          </h3>
-          <input placeholder={t('name_placeholder')} style={inputStyle} onChange={(e) => setProfileInfo({...profileInfo, name: e.target.value})} />
-          <input placeholder={t('phone_placeholder')} type="tel" style={inputStyle} onChange={(e) => setProfileInfo({...profileInfo, phone: e.target.value})} />
-          
-          {role === 'master' && (
-            <select style={inputStyle} onChange={(e) => setProfileInfo({...profileInfo, service: e.target.value})}>
-              {serviceIcons.map(s => <option key={s.id} value={s.id} style={{background: '#000'}}>{s.label}</option>)}
-            </select>
-          )}
-          
-          <button onClick={handleSave} disabled={loading} style={{ width: '100%', padding: '15px', backgroundColor: '#FFD700', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-            {loading ? t('loading') : t('start')}
-          </button>
-        </motion.div>
+        <div style={{ background: '#1A1A1A', padding: '30px', borderRadius: '25px', maxWidth: '400px', margin: '40px auto', border: '1px solid #333' }}>
+          <h3 style={{ color: '#FFB800', textAlign: 'center', marginBottom: '20px' }}>{t('registration')}</h3>
+          <input placeholder={t('name_placeholder')} style={{ width: '100%', padding: '15px', marginBottom: '10px', borderRadius: '10px', border: '1px solid #333', background: '#000', color: '#fff', boxSizing: 'border-box' }} onChange={e => setProfileInfo({...profileInfo, name: e.target.value})} />
+          <input placeholder={t('phone_placeholder')} style={{ width: '100%', padding: '15px', marginBottom: '20px', borderRadius: '10px', border: '1px solid #333', background: '#000', color: '#fff', boxSizing: 'border-box' }} onChange={e => setProfileInfo({...profileInfo, phone: e.target.value})} />
+          <button onClick={handleSave} style={{ width: '100%', padding: '15px', background: '#FFB800', color: '#000', borderRadius: '10px', fontWeight: '900', border: 'none' }}>{loading ? t('loading') : t('start')}</button>
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {role === 'user' ? (
-            <>
-              <div style={{ height: '450px', borderRadius: '20px', overflow: 'hidden', border: '1px solid #333' }}>
-                <Maps filterService={selectedService} senderInfo={profileInfo} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {serviceIcons.map(s => (
-                  <button 
-                    key={s.id}
-                    onClick={() => setSelectedService(selectedService === s.id ? null : s.id)}
-                    style={{ 
-                      padding: '15px', borderRadius: '15px', border: 'none', 
-                      backgroundColor: selectedService === s.id ? '#FFD700' : '#1a1a1a',
-                      color: selectedService === s.id ? '#000' : '#fff', cursor: 'pointer'
-                    }}>
-                    {s.icon} {s.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div style={glassStyle}>
-              <h3 style={{color: '#FFD700'}}>{t('Xabarlar')}: {messages.length}</h3>
-              {messages.map(msg => (
-                <div key={msg.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '15px', marginTop: '10px', borderLeft: '4px solid #FFD700' }}>
-                  <p>👤 <b>{msg.senderName}</b></p>
-                  <p>📞 {msg.senderPhone}</p>
-                  <p>💬 {msg.text}</p>
-                  <button onClick={() => window.open(`tel:${msg.senderPhone}`)} style={{ background: '#00C851', border: 'none', padding: '8px 15px', borderRadius: '8px', color: '#fff', cursor: 'pointer', marginTop: '5px' }}>
-                    {t('Qo\'ng\'iroq')}
-                  </button>
-                </div>
+        role === 'user' ? (
+          <>
+            <div style={{ height: '400px', borderRadius: '25px', overflow: 'hidden', border: '2px solid #333', marginBottom: '20px' }}>
+              <Maps filterService={selectedService} senderInfo={profileInfo} services={services} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {services.map(s => (
+                <button key={s.id} onClick={() => setSelectedService(s.id)} style={{ padding: '15px', borderRadius: '15px', background: selectedService === s.id ? '#FFB800' : '#1A1A1A', color: selectedService === s.id ? '#000' : '#fff', border: 'none', fontWeight: 'bold' }}>{s.icon} {s.label}</button>
               ))}
             </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <div style={{ background: '#1A1A1A', padding: '20px', borderRadius: '20px' }}>
+            <h3 style={{ color: '#FFB800' }}>📬 {t('messages')}: {messages.length}</h3>
+            {messages.map(msg => (
+              <div key={msg.id} style={{ background: '#0D0D0D', padding: '15px', borderRadius: '15px', marginBottom: '10px', borderLeft: '5px solid #FFB800' }}>
+                <p style={{margin: '0 0 5px'}}>👤 <b>{msg.senderName}</b> | 📞 {msg.senderPhone}</p>
+                <p style={{color: '#FFB800', margin: '0 0 10px'}}>💬 {msg.text}</p>
+                <button onClick={() => window.open(`tel:${msg.senderPhone}`)} style={{ background: '#00C851', border: 'none', padding: '8px 15px', borderRadius: '8px', color: '#fff', fontWeight: 'bold' }}>📞 {t('call')}</button>
+              </div>
+            ))}
+          </div>
+        )
       )}
     </div>
   );
 };
-
 export default Dashboard;
