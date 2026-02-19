@@ -4,9 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { db } from "./firebase";
 import { collection, onSnapshot, query, where, addDoc, serverTimestamp } from "firebase/firestore";
-import { useTranslation } from 'react-i18next';
 
-// Ikonkalar uchun
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 let DefaultIcon = L.icon({ iconUrl: markerIcon, shadowUrl: markerShadow, iconSize: [25, 41], iconAnchor: [12, 41] });
@@ -19,7 +17,6 @@ function ChangeView({ center }) {
 }
 
 function Maps({ filterService, senderInfo, services }) {
-  const { t } = useTranslation();
   const [userLoc, setUserLoc] = useState([41.2995, 69.2401]);
   const [masters, setMasters] = useState([]);
 
@@ -27,32 +24,17 @@ function Maps({ filterService, senderInfo, services }) {
     navigator.geolocation.getCurrentPosition((pos) => setUserLoc([pos.coords.latitude, pos.coords.longitude]));
     let q = query(collection(db, "masters"), where("isAvailable", "==", true));
     if (filterService) q = query(q, where("service", "==", filterService));
-    return onSnapshot(q, (snapshot) => {
-      setMasters(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    return onSnapshot(q, (snapshot) => setMasters(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
   }, [filterService]);
 
-  const sendMessage = async (master) => {
-    const msgText = services.find(s => s.id === filterService)?.msg || "Yordam kerak!";
-    try {
-      await addDoc(collection(db, "messages"), { senderName: senderInfo.name, senderPhone: senderInfo.phone, receiverId: master.id, text: msgText, createdAt: serverTimestamp() });
-      alert(t('message_sent'));
-    } catch (e) { alert(e.message); }
-  };
-
   return (
-    <MapContainer center={userLoc} zoom={13} style={{ height: '400px', width: '100%' }}>
+    <MapContainer center={userLoc} zoom={13} style={{ height: '100%', width: '100%' }}>
       <ChangeView center={userLoc} />
-      <TileLayer url="https://{s}://{z}/{x}/{y}{r}.png" />
+      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <Marker position={userLoc}><Popup>Siz shu yerdasiz</Popup></Marker>
       {masters.map(m => (
         <Marker key={m.id} position={[m.lat, m.lng]}>
-          <Popup>
-            <div style={{color:'#000'}}>
-              <b>{m.name}</b><br/>⭐ {m.rating} | 💰 {m.price || '0'} so'm<br/>
-              <button onClick={() => sendMessage(m)} style={{background:'#FFB800', border:'none', padding:'5px', marginTop:'5px', cursor:'pointer', width:'100%', fontWeight:'bold'}}>💬 {t('call')}</button>
-            </div>
-          </Popup>
+          <Popup><b>{m.name}</b><br/>💰 {m.price} so'm<br/>⭐ {m.rating}</Popup>
         </Marker>
       ))}
     </MapContainer>
